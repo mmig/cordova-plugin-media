@@ -273,6 +273,17 @@
         CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
     }
+    
+    ////CB-6880 impl.: MODIFICATION use MEDIA_LOADING (immediately prepare audio for playing)
+    if ((audioFile != nil) && (audioFile.resourceURL != nil) && (audioFile.player == nil)) {
+        BOOL bError = [self prepareToPlay:audioFile withId:mediaId];
+        if(bError) {
+            ////CB-6880 impl.: MODIFICATION use MEDIA_LOADING (send MEDIA_ERROR status message if preparing failed)
+            NSString* jsString = [NSString stringWithFormat:@"%@(\"%@\",%d,%@);", @"cordova.require('org.apache.cordova.media.Media').onStatus", mediaId, MEDIA_ERROR, [self createMediaErrorWithCode:MEDIA_ERR_NONE_SUPPORTED message:nil]];
+            [self.commandDelegate evalJs:jsString];
+        }
+        
+    }
 }
 
 - (void)setVolume:(CDVInvokedUrlCommand*)command
@@ -424,6 +435,10 @@
         audioFile.player.mediaId = mediaId;
         audioFile.player.delegate = self;
         bError = ![audioFile.player prepareToPlay];
+        
+        //CB-6880 impl.: MODIFICATION use MEDIA_LOADING (send MEDIA_STARTING status message when media is ready for playing)
+		NSString* jsString = [NSString stringWithFormat:@"%@(\"%@\",%d,%d);",   @"cordova.require('org.apache.cordova.media.Media').onStatus", mediaId, MEDIA_STATE, MEDIA_STARTING];
+		[self.commandDelegate evalJs:jsString];
     }
     return bError;
 }
