@@ -16,7 +16,10 @@ node_modules
 .project
 .settings
 
-
+#eclipse
+bin
+.project
+.classpath
 
 
 
