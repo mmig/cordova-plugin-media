@@ -267,6 +267,19 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
 
             //avPlayer = [[AVPlayer alloc] initWithURL:resourceUrl];
         }
+    	//CB-6880 impl.: MODIFICATION immediately prepare media on creation
+    	else {
+        
+		    audioFile = [self audioFileForResource:resourcePath withId:mediaId doValidation:YES forRecording:NO];//<- doValidation:YES
+		    BOOL bError = NO;
+		    if (audioFile != nil && audioFile.player == nil) {
+		        bError = [self prepareToPlay:audioFile withId:mediaId];
+		        if (bError) {
+		            audioFile.player = nil;
+		        }
+		    }
+		}
+		
 
         self.currMediaId = mediaId;
 
@@ -495,6 +508,13 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
         if (avPlayer == nil)
             bError = ![audioFile.player prepareToPlay];
     }
+    
+    //CB-6880 impl.: MODIFICATION use MEDIA_LOADING (send MEDIA_STARTING status event in the sense of "media ready")
+    if(!bError){
+        NSString* jsString = [NSString stringWithFormat:@"%@(\"%@\",%d,%d);", @"cordova.require('cordova-plugin-media.Media').onStatus", mediaId, MEDIA_STATE, MEDIA_STARTING];
+        [self.commandDelegate evalJs:jsString];
+    }
+    
     return bError;
 }
 
